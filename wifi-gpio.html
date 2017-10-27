@@ -19,6 +19,16 @@ var view = {};
 var controls = ["gpio0", "gpio1", "gpio2", "gpio3"];
 
 
+function toggleChanged() {
+	var url = "http://" + host + "/";
+	for (var i=0; i<4; i++) {
+		url += view["gpio" + i].checked ? "1" : "0";
+	}
+	var xmlhttp = new XMLHttpRequest();
+	xmlhttp.open("GET", url, true);
+	xmlhttp.send();
+}
+
 function argsFromQueryString(queryString) {
 	var args = {};
 	if (!queryString)
@@ -53,6 +63,25 @@ function initView() {
   </header>
 
   <main class="mdl-layout__content">
+  <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio0">
+    <input type="checkbox" id="gpio0" class="mdl-switch__input" onchange="toggleChanged()">
+    <span class="mdl-switch__label">GPIO 0</span>
+  </label>
+
+  <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio1">
+    <input type="checkbox" id="gpio1" class="mdl-switch__input" onchange="toggleChanged()">
+    <span class="mdl-switch__label">GPIO 1</span>
+  </label>
+
+  <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio2">
+    <input type="checkbox" id="gpio2" class="mdl-switch__input" onchange="toggleChanged()">
+    <span class="mdl-switch__label">GPIO 2</span>
+  </label>
+
+  <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio3">
+    <input type="checkbox" id="gpio3" class="mdl-switch__input" onchange="toggleChanged()">
+    <span class="mdl-switch__label">GPIO 3</span>
+  </label>
 
   </main>
 </div>
