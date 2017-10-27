@@ -62,26 +62,35 @@ function initView() {
     </div>
   </header>
 
-  <main class="mdl-layout__content">
+  <main class="mdl-grid">
+
+  <div class="mdl-cell mdl-cell--6-col">
   <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio0">
     <input type="checkbox" id="gpio0" class="mdl-switch__input" onchange="toggleChanged()">
     <span class="mdl-switch__label">GPIO 0</span>
   </label>
+  </div>
 
+  <div class="mdl-cell mdl-cell--6-col">
   <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio1">
     <input type="checkbox" id="gpio1" class="mdl-switch__input" onchange="toggleChanged()">
     <span class="mdl-switch__label">GPIO 1</span>
   </label>
+  </div>
 
+  <div class="mdl-cell mdl-cell--6-col">
   <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio2">
     <input type="checkbox" id="gpio2" class="mdl-switch__input" onchange="toggleChanged()">
     <span class="mdl-switch__label">GPIO 2</span>
   </label>
+  </div>
 
+  <div class="mdl-cell mdl-cell--6-col">
   <label class="mdl-switch mdl-js-switch mdl-js-ripple-effect" for="gpio3">
     <input type="checkbox" id="gpio3" class="mdl-switch__input" onchange="toggleChanged()">
     <span class="mdl-switch__label">GPIO 3</span>
   </label>
+  </div>
 
   </main>
 </div>
