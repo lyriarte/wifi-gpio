@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>WiFi GPIO</title>
+
+<link rel="stylesheet" type="text/css" href="lib/mdl/material.min.css">
+<link rel="stylesheet" href = "https://fonts.googleapis.com/icon?family=Material+Icons">
+<script src="lib/mdl/material.min.js"></script>
+
+<script type="text/javascript">
+
+var host = "wifi-relay";
+
+var view = {};
+var controls = ["gpio0", "gpio1", "gpio2", "gpio3"];
+
+
+function argsFromQueryString(queryString) {
+	var args = {};
+	if (!queryString)
+		return args;
+	var getVars = queryString.split("\&");
+	for (var i=0; i<getVars.length; i++) {
+		var varVal = getVars[i].split("\=");
+		if (varVal.length == 2)
+			args[varVal[0]] = varVal[1];
+	}
+	return args;
+}
+
+function initView() {
+	controls.map(function (x) {view[x] = document.getElementById(x);});
+	var args = argsFromQueryString(window.location.toString().split("\?")[1]);
+	if (args.host)
+		host = args.host;
+}
+
+</script>
+</head>
+
+
+<body onload="initView()">
+
+<div class="mdl-layout mdl-js-layout mdl-layout--fixed-header">
+  <header class="mdl-layout__header">
+    <div class="mdl-layout__header-row">
+      <span class="mdl-layout-title">WiFi GPIO</span>
+    </div>
+  </header>
+
+  <main class="mdl-layout__content">
+
+  </main>
+</div>
+
+</body>
+</html>
