@@ -19,6 +19,8 @@ var view = {};
 var controls = ["gpio0", "gpio1", "gpio2", "gpio3"];
 
 var togglePollId;
+var toggleChangedCount = 0;
+var toggleChangedStamp = 0;
 
 
 function togglePoll() {
@@ -27,6 +29,11 @@ function togglePoll() {
 
 	xmlhttp.onreadystatechange = function() {
 		if (this.status == 200 && this.readyState == 4) {
+			if (toggleChangedCount) {
+				if (Date.now() - toggleChangedStamp < 2000)
+					return;
+				toggleChangedCount = 0;
+			}
 			for (var i=0; i<4; i++) {
 				var switchElement = document.getElementById("switchgpio" + i);
 				if (this.responseText[i] == '0')
@@ -42,11 +49,21 @@ function togglePoll() {
 }
 
 function toggleChanged() {
+	toggleChangedStamp = Date.now();
+	toggleChangedCount++;
+
 	var url = "http://" + host + "/";
 	for (var i=0; i<4; i++) {
 		url += view["gpio" + i].checked ? "1" : "0";
 	}
 	var xmlhttp = new XMLHttpRequest();
+
+	xmlhttp.onreadystatechange = function() {
+		if (this.status == 200 && this.readyState == 4 && toggleChangedCount) {
+			toggleChangedCount--;
+		}
+	}
+
 	xmlhttp.open("GET", url, true);
 	xmlhttp.send();
 }
