@@ -1,8 +1,7 @@
 /*
- * Copyright (c) 2017, Luc Yriarte
+ * Copyright (c) 2020, Luc Yriarte
  * License: BSD <http://www.opensource.org/licenses/bsd-license.php>
  */
-
 
 #include <ESP8266WiFi.h>
 #include <ESP8266mDNS.h>
@@ -13,10 +12,12 @@
  * **** **** **** **** **** ****/
 
 #define serverPORT 80
-#define AP_SUBNET 64
-#define WIFI_CLIENT_DELAY 500
-#define WIFI_CONNECT_DELAY 10000
-#define WIFI_CONNECT_RETRY 10
+#define WIFI_CLIENT_DELAY_MS 500
+#define WIFI_CLIENT_CONNECTED_DELAY_MS 100
+#define WIFI_SERVER_DELAY_MS 200
+#define WIFI_CONNECT_DELAY_MS 3000
+#define WIFI_CONNECT_RETRY_DELAY_MS 1000
+#define WIFI_CONNECT_RETRY 5
 
 enum {
 	METHOD,
@@ -36,10 +37,33 @@ enum {
 WiFiServer wifiServer(serverPORT);
 WiFiClient wifiClient;
 
-char * wifiSSIDs[] = {"SSID1", "SSID2", "SSID3"};
-char * wifiPASSWDs[] = {"pwd1", "pwd2", "pwd3"};
+typedef struct {
+  char * SSID;
+  char * passwd;
+  IPAddress address;
+  IPAddress gateway;
+  IPAddress netmask;
+} wifiNetInfo;
+
+wifiNetInfo networks[] = {
+  {
+    "network1",
+    "password",
+    IPAddress(192,168,0,2),
+    IPAddress(192,168,0,1),
+    IPAddress(255,255,255,0)
+  },
+  {
+    "network2",
+    "password",
+    IPAddress(0,0,0,0),
+    IPAddress(0,0,0,0),
+    IPAddress(0,0,0,0)
+  }
+};
+
+
 int wifiStatus = WL_IDLE_STATUS;
-bool wifiAPmode = false;
 char hostnameSSID[] = "ESP_XXXXXX";
 char wifiMacStr[] = "00:00:00:00:00:00";
 byte wifiMacBuf[6];
@@ -50,9 +74,14 @@ byte wifiMacBuf[6];
 
 int pinState[] = {0,0,0,0};
 
+
 /* **** **** **** **** **** ****
  * Functions
  * **** **** **** **** **** ****/
+
+/*
+ * WiFi
+ */
 
 void wifiMacInit() {
 	WiFi.macAddress(wifiMacBuf);
@@ -74,37 +103,28 @@ void wifiMacInit() {
 	}
 }
 
-void wifiAPInit() {
-	IPAddress ip(192, 168, AP_SUBNET, 1);
-	IPAddress mask(255,255,255,0);
-	WiFi.mode(WIFI_AP_STA);
-	WiFi.softAPConfig(ip,ip,mask);
-	WiFi.softAP(hostnameSSID);
-	delay(WIFI_CONNECT_DELAY);
-	wifiAPmode = true;
-}
-
 bool wifiConnect(int retry) {
 	int i,n;
-	if (wifiAPmode || wifiStatus == WL_CONNECTED)
+	wifiStatus = WiFi.status();
+	if (wifiStatus == WL_CONNECTED)
 		return true;
-	n = sizeof(wifiSSIDs) / sizeof(char *);
+	n = sizeof(networks) / sizeof(wifiNetInfo);
 	for (i=0; i<n; i++) {
-		if (wifiConnectSSID(wifiSSIDs[i], wifiPASSWDs[i], retry))
+		if (wifiNetConnect(&networks[i], retry))
 			return true;
 	}
+	WiFi.disconnect();
+	wifiStatus = WiFi.status();
 	return false;
 }
 
-bool wifiConnectSSID(char * wifiSSID, char * wifiPASSWD, int retry) {
-	wifiStatus = WiFi.status();
-	while (wifiStatus != WL_CONNECTED && retry != 0) {
-		if (wifiStatus != WL_IDLE_STATUS) {
-			wifiStatus = WiFi.begin(wifiSSID, wifiPASSWD);
-			if (retry > 0)
-				retry--;
-		}
-		delay(WIFI_CONNECT_DELAY);
+bool wifiNetConnect(wifiNetInfo *net, int retry) {
+	WiFi.config(net->address, net->gateway, net->netmask);  
+	wifiStatus = WiFi.begin(net->SSID, net->passwd);
+	while (wifiStatus != WL_CONNECTED && retry > 0) {
+		retry--;
+		delay(WIFI_CONNECT_DELAY_MS);
+		wifiStatus = WiFi.status();
 	}
 	if (wifiStatus == WL_CONNECTED) {
 		MDNS.begin(hostnameSSID);
@@ -123,10 +143,10 @@ void pinUpdate() {
 		digitalWrite(i, pinState[i]);
 }
 
+
 /*
  * setup / main loop
  */
-
 
 void setup() {
 	int i;
@@ -134,50 +154,50 @@ void setup() {
 		pinMode(i, OUTPUT);
 	pinUpdate();
 	wifiMacInit();
-	if (!wifiConnect(WIFI_CONNECT_RETRY))
-		wifiAPInit();
-	wifiServer.begin();
 }
 
 void loop() {
 	int i, j, nread, readstate;
-	if (!wifiConnect(WIFI_CONNECT_RETRY))
-		wifiAPInit();
-	wifiClient = wifiServer.available();
-	if (wifiClient && wifiClient.connected()) {
-		delay(100);
-		i = j = 0;
-		readstate = METHOD;
-		while (wifiClient.available()) {
-			char c = wifiClient.read();
-			switch (readstate) {
-				case METHOD:
-					if (c == '/')
-						readstate = URI;
-					else if (c == '\n')
-						readstate = IGNORE;
-					break;
-				case URI:
-					if (i > 3 || c < '0' || c > '1') {
-						readstate = IGNORE;
+	while (!wifiConnect(WIFI_CONNECT_RETRY))
+		delay(WIFI_CONNECT_RETRY_DELAY_MS);
+	wifiServer.begin();
+	delay(WIFI_SERVER_DELAY_MS);
+	while (wifiStatus == WL_CONNECTED) {
+		wifiClient = wifiServer.available();
+		if (wifiClient && wifiClient.connected()) {
+			i = j = 0;
+			readstate = METHOD;
+			while (wifiClient.available()) {
+				char c = wifiClient.read();
+				switch (readstate) {
+					case METHOD:
+						if (c == '/')
+							readstate = URI;
+						else if (c == '\n')
+							readstate = IGNORE;
 						break;
-					}
-					pinState[i++] = c - '0';
-					break;
-				default:
-					break;
+					case URI:
+						if (i > 3 || c < '0' || c > '1') {
+							readstate = IGNORE;
+							break;
+						}
+						pinState[i++] = c - '0';
+						break;
+					default:
+						break;
+				}
 			}
+			pinUpdate();
+			wifiClient.println("HTTP/1.1 200 OK");
+			wifiClient.println("Content-Type: text/plain");
+			wifiClient.println("Access-Control-Allow-Origin: *");
+			wifiClient.println("Connection: close");
+			wifiClient.println();
+			for (i=0; i<4; i++)
+				wifiClient.print(pinState[i]);
+			wifiClient.println();
+			delay(WIFI_CLIENT_DELAY_MS);
+			wifiClient.stop();
 		}
-		pinUpdate();
-		wifiClient.println("HTTP/1.1 200 OK");
-		wifiClient.println("Content-Type: text/plain");
-		wifiClient.println("Access-Control-Allow-Origin: *");
-		wifiClient.println("Connection: close");
-		wifiClient.println();
-		for (i=0; i<4; i++)
-			wifiClient.print(pinState[i]);
-		wifiClient.println();
-		delay(WIFI_CLIENT_DELAY);
-		wifiClient.stop();
 	}
 }
